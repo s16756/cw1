@@ -17,24 +17,50 @@ namespace Cw1
         
         public static async Task Main(string[] args)
         {
+            if (!args.Any())
+            {
+                throw new ArgumentNullException(nameof(args));
+            }
+
+            if (!Uri.TryCreate(args[0], UriKind.Absolute, out var uriResult))
+            {
+                throw new ArgumentException(nameof(args));
+            }
+            
             var emails = await GetEmails(args[0]);
 
-            foreach (var email in emails)
+            if (emails == null || !emails.Any())
             {
-                Console.WriteLine(email);
+                Console.WriteLine("Nie znaleziono adresów email");
+            }
+            else
+            {
+                foreach (var email in emails.Distinct())
+                {
+                    Console.WriteLine(email);
+                }
             }
         }
 
         private static async Task<IEnumerable<string>> GetEmails(string url)
         {
-            using var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(url);
-            var stringContent = await response.Content.ReadAsStringAsync();
+            try
+            {
+                using var httpClient = new HttpClient();
+                var response = await httpClient.GetAsync(url);
 
-            var emailRegex = new Regex(MatchEmailPattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            var matches = emailRegex.Matches(stringContent);
+                var stringContent = await response.Content.ReadAsStringAsync();
 
-            return matches.Select(m => m.ToString());
+                var emailRegex = new Regex(MatchEmailPattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var matches = emailRegex.Matches(stringContent);
+
+                return matches.Select(m => m.ToString());
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Błąd w czasie pobierania strony");
+                return null;
+            }
         }
     }
 }
